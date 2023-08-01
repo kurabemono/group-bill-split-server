@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'djoser',
     'core',
-    'bill'
+    'tracker'
 ]
 
 MIDDLEWARE = [

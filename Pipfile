@@ -10,6 +10,7 @@ djangorestframework-simplejwt = "*"
 djoser = "*"
 gunicorn = "*"
 django-filter = "*"
+drf-nested-routers = "*"
 
 [dev-packages]
 pylint-django = "*"

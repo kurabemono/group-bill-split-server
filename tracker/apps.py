@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class BillConfig(AppConfig):
+class TrackerConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'bill'
+    name = 'tracker'

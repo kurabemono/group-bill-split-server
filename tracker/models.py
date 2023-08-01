@@ -7,6 +7,9 @@ class Currency(models.Model):
     name = models.CharField(max_length=255)
     decimals = models.PositiveSmallIntegerField()
 
+    def __str__(self) -> str:
+        return f'{self.code} - {self.name}'
+
     class Meta:
         verbose_name_plural = 'currencies'
 
@@ -22,7 +25,8 @@ class Bill(models.Model):
 
 
 class BillItem(models.Model):
-    bill = models.ForeignKey(Bill, on_delete=models.CASCADE)
+    bill = models.ForeignKey(
+        Bill, on_delete=models.CASCADE, related_name='items')
     currency = models.ForeignKey(Currency, on_delete=models.PROTECT)
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
