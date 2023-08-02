@@ -13,13 +13,6 @@ def create_bill(api_client):
     return do_create_bill
 
 
-@pytest.fixture
-def create_billitem(api_client):
-    def do_create_billitem(bill_id, billitem):
-        return api_client.post(f'/tracker/bills/{bill_id}/items/', billitem)
-    return do_create_billitem
-
-
 @pytest.mark.django_db
 class TestCreateBill:
     def test_if_user_is_anonymous_returns_401(self, create_bill):
@@ -55,7 +48,6 @@ class TestCreateBill:
         User = get_user_model()
         user = baker.make(User)
         currency = baker.make(Currency)
-        print(currency.pk)
 
         response = create_bill({
             'title': 'a',
@@ -68,43 +60,68 @@ class TestCreateBill:
 
 
 @pytest.mark.django_db
-class TestCreateBillItem:
-    def test_if_user_is_anonymous_returns_401(self, create_billitem):
+class TestRetrieveBill:
+    def test_list_if_user_is_anonymous_returns_401(self, api_client, create_bill):
         User = get_user_model()
         user = baker.make(User)
         currency = baker.make(Currency)
-        bill = baker.make(Bill, creator=user.member)
-
-        response = create_billitem(bill.id, {
-            'name': 'test',
-            'price': 1,
-            'currency': currency.pk,
-            'paid_date': '2023-08-01',
-            'payer': user.member
+        api_client.force_authenticate(user=user)
+        bill_response = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
         })
+        api_client.force_authenticate(user=None)
+
+        response = api_client.get('/tracker/bills/')
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_if_bill_does_not_exist_returns_400(self, authenticate, create_billitem):
-        authenticate()
+    def test_object_if_user_is_anonymous_returns_401(self, api_client, create_bill):
         User = get_user_model()
         user = baker.make(User)
         currency = baker.make(Currency)
-
-        response = create_billitem(1, {
-            'name': 'test',
-            'price': 1,
-            'currency': currency.pk,
-            'paid_date': '2023-08-01',
-            'payer': user.member
+        api_client.force_authenticate(user=user)
+        bill_response = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
         })
+        bill_id = bill_response.data['id']
+        api_client.force_authenticate(user=None)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        response = api_client.get(f'/tracker/bills/{bill_id}/')
 
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-@pytest.mark.django_db
-class TestRetrieveBill:
-    def test_if_bill_exists_returns_200(self, authenticate, api_client, create_bill):
+    def test_if_bill_does_not_exist_returns_404(self, api_client):
+        User = get_user_model()
+        user = baker.make(User)
+        api_client.force_authenticate(user=user)
+
+        response = api_client.get(f'/tracker/bills/1/')
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_if_not_owner_of_bill_returns_404(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        user2 = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill_response = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill_response.data['id']
+        api_client.force_authenticate(user=user2)
+
+        response = api_client.get(f'/tracker/bills/{bill_id}/')
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_if_bill_exists_returns_200(self, api_client, create_bill):
         User = get_user_model()
         user = baker.make(User)
         api_client.force_authenticate(user=user)
@@ -120,3 +137,180 @@ class TestRetrieveBill:
 
         assert response.status_code == status.HTTP_200_OK
         assert response.data['title'] == bill_response.data['title']
+
+    def test_if_member_of_bill_returns_200(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        user2 = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill_response = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk,
+            'members': [user2.member.id]
+        })
+        bill_id = bill_response.data['id']
+
+        api_client.force_authenticate(user=user2)
+
+        response = api_client.get(f'/tracker/bills/{bill_id}/')
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['title'] == bill_response.data['title']
+
+
+@pytest.mark.django_db
+class TestUpdateBill:
+    def test_if_put_user_is_anonymous_returns_401(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+        api_client.force_authenticate(user=None)
+
+        response = api_client.put(f'/tracker/bills/{bill_id}/', {
+            'title': 'b',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_if_patch_user_is_anonymous_returns_401(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+        api_client.force_authenticate(user=None)
+
+        response = api_client.patch(f'/tracker/bills/{bill_id}/', {
+            'title': 'b',
+        })
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_if_user_is_not_creator_returns_404(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        user2 = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+        api_client.force_authenticate(user=user2)
+
+        response = api_client.put(f'/tracker/bills/{bill_id}/', {
+            'title': 'b',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_if_data_is_invalid_returns_400(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+
+        response = api_client.patch(f'/tracker/bills/{bill_id}/', {
+            'title': '',
+        })
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_if_data_is_valid_returns_200(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+
+        response = api_client.patch(f'/tracker/bills/{bill_id}/', {
+            'title': 'b',
+        })
+
+        assert response.status_code == status.HTTP_200_OK
+
+
+@pytest.mark.django_db
+class TestDeleteBill:
+    def test_if_user_is_anonymous_returns_401(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+        api_client.force_authenticate(user=None)
+
+        response = api_client.delete(f'/tracker/bills/{bill_id}/')
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_if_user_is_not_creator_returns_404(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        user2 = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+        api_client.force_authenticate(user=user2)
+
+        response = api_client.delete(f'/tracker/bills/{bill_id}/')
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_if_user_is_creator_returns_204(self, api_client, create_bill):
+        User = get_user_model()
+        user = baker.make(User)
+        user2 = baker.make(User)
+        currency = baker.make(Currency)
+        api_client.force_authenticate(user=user)
+        bill = create_bill({
+            'title': 'a',
+            'display_currency': currency.pk,
+            'creator': user.member.pk
+        })
+        bill_id = bill.data['id']
+
+        response = api_client.delete(f'/tracker/bills/{bill_id}/')
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
