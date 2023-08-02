@@ -8,8 +8,32 @@ class CurrencySerializer(serializers.ModelSerializer):
         fields = ['code', 'name', 'decimals']
 
 
+class MemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Member
+        fields = ['id', 'username', 'preferred_currency']
+
+
+class SimpleMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Member
+        fields = ['id', 'username']
+
+
 class BillItemSerializer(serializers.ModelSerializer):
-    currency = CurrencySerializer()
+    # currency = CurrencySerializer()
+    payer = SimpleMemberSerializer()
+
+    class Meta:
+        model = models.BillItem
+        fields = ['id', 'name', 'price', 'currency', 'paid_date', 'payer']
+
+
+class AddBillItemSerializer(serializers.ModelSerializer):
+
+    def create(self, validated_data):
+        bill_id = self.context['bill_id']
+        return models.BillItem.objects.create(bill_id=bill_id, **validated_data)
 
     class Meta:
         model = models.BillItem
@@ -17,8 +41,14 @@ class BillItemSerializer(serializers.ModelSerializer):
 
 
 class BillSerializer(serializers.ModelSerializer):
-    items = BillItemSerializer(many=True, read_only=True)
+    creator = SimpleMemberSerializer()
 
     class Meta:
         model = models.Bill
-        fields = ['id', 'title', 'creator', 'members', 'items']
+        fields = ['id', 'title', 'creator', 'members']
+
+
+class CreateBillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Bill
+        fields = ['id', 'title', 'creator', 'members']

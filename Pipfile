@@ -17,6 +17,7 @@ pylint-django = "*"
 pytest = "*"
 pytest-django = "*"
 model-bakery = "*"
+django-debug-toolbar = "*"
 
 [requires]
 python_version = "3.9"
