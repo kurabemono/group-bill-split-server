@@ -45,10 +45,10 @@ class BillSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Bill
-        fields = ['id', 'title', 'creator', 'members']
+        fields = ['id', 'title', 'creator', 'display_currency', 'members']
 
 
 class CreateBillSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Bill
-        fields = ['id', 'title', 'creator', 'members']
+        fields = ['id', 'title', 'creator', 'display_currency', 'members']
