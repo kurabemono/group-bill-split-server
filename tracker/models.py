@@ -49,5 +49,5 @@ class BillItem(models.Model):
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     paid_date = models.DateField()
-    payer = models.ForeignKey(Member, on_delete=models.PROTECT)
+    creator = models.ForeignKey(Member, on_delete=models.PROTECT)
     last_update = models.DateTimeField(auto_now=True)

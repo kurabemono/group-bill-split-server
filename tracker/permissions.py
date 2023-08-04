@@ -1,15 +1,37 @@
+
 from rest_framework import permissions
+from .models import Bill
 
 
-class IsOwner(permissions.BasePermission):
+class IsCreator(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        return request.user.member.id == obj.creator
+        return request.user.member.id == obj.creator.id
 
 
-class IsOwnerOrMember(permissions.BasePermission):
+class IsCreatorOrMember(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user_id = request.user.member.id
-        print(obj)
-        print(f'is_creator: {obj.creator_id == user_id}')
-        print(f'is_owner: {obj.members.filter(pk=user_id).exists()}')
-        return obj.creator_id == user_id or obj.members.filter(pk=user_id).exists()
+        is_creator = obj.creator.id == user_id
+        is_member = obj.members.filter(pk=user_id).exists()
+        return is_creator or is_member
+
+
+class IsCreatorOrMemberOfParentBill(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user_id = request.user.member.id
+        bill_id = view.kwargs.get('bill_pk')
+        try:
+            bill = Bill.objects.get(pk=bill_id)
+            is_creator = bill.creator.pk == user_id
+            is_member = bill.members.filter(pk=user_id).exists()
+            return is_creator or is_member
+        except Bill.DoesNotExist:
+            return False
+
+    # def has_object_permission(self, request, view, obj):
+    #     user_id = request.user.member.id
+    #     is_creator = obj.bill.creator.id == user_id
+    #     is_member = obj.bill.members.filter(pk=user_id).exists()
+    #     print(f'is_creator: {is_creator}')
+    #     print(f'is_member: {is_member}')
+    #     return is_creator or is_member

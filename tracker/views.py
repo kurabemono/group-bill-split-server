@@ -1,13 +1,13 @@
 from django.shortcuts import render
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from rest_framework import status
-from .permissions import IsOwner, IsOwnerOrMember
+from .permissions import IsCreator, IsCreatorOrMember, IsCreatorOrMemberOfParentBill
 from . import models, serializers
 
 
 class BillViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCreatorOrMember]
     search_fields = ['title']
 
     def get_serializer_class(self):
@@ -32,11 +32,22 @@ class BillViewSet(ModelViewSet):
 
 
 class BillItemViewSet(ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            permission_classes.append(IsCreator)
+        else:
+            permission_classes.append(IsCreatorOrMemberOfParentBill)
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
-        if self.request.method in ['POST', 'PUT', 'PATCH']:
+        if self.request.method == 'POST':
             return serializers.AddBillItemSerializer
+        elif self.request.method in ['PUT', 'PATCH']:
+            return serializers.UpdateBillItemSerializer
+
         return serializers.BillItemSerializer
 
     def get_serializer_context(self):

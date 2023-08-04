@@ -3,7 +3,6 @@ from rest_framework import status
 import pytest
 from model_bakery import baker
 from tracker.models import Bill, Currency, Member
-from pprint import pprint
 
 
 @pytest.fixture
@@ -148,7 +147,7 @@ class TestRetrieveBill:
             'title': 'a',
             'display_currency': currency.pk,
             'creator': user.member.pk,
-            'members': [user2.member.id]
+            'members': [user2.member.pk]
         })
         bill_id = bill_response.data['id']
 
@@ -202,7 +201,7 @@ class TestUpdateBill:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_if_user_is_not_creator_returns_404(self, api_client, create_bill):
+    def test_if_user_is_not_creator_returns_403(self, api_client, create_bill):
         User = get_user_model()
         user = baker.make(User)
         user2 = baker.make(User)
@@ -222,7 +221,7 @@ class TestUpdateBill:
             'creator': user.member.pk
         })
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_if_data_is_invalid_returns_400(self, api_client, create_bill):
         User = get_user_model()
@@ -280,7 +279,7 @@ class TestDeleteBill:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_if_user_is_not_creator_returns_404(self, api_client, create_bill):
+    def test_if_user_is_not_creator_returns_403(self, api_client, create_bill):
         User = get_user_model()
         user = baker.make(User)
         user2 = baker.make(User)
@@ -296,7 +295,7 @@ class TestDeleteBill:
 
         response = api_client.delete(f'/tracker/bills/{bill_id}/')
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_if_user_is_creator_returns_204(self, api_client, create_bill):
         User = get_user_model()

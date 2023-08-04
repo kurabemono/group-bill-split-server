@@ -1,4 +1,4 @@
-from rest_framework import serializers
+from rest_framework import serializers, status
 from . import models
 
 
@@ -21,23 +21,32 @@ class SimpleMemberSerializer(serializers.ModelSerializer):
 
 
 class BillItemSerializer(serializers.ModelSerializer):
-    # currency = CurrencySerializer()
-    payer = SimpleMemberSerializer()
+    creator = SimpleMemberSerializer()
 
     class Meta:
         model = models.BillItem
-        fields = ['id', 'name', 'price', 'currency', 'paid_date', 'payer']
+        fields = ['id', 'name', 'price', 'currency', 'paid_date', 'creator']
 
 
 class AddBillItemSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         bill_id = self.context['bill_id']
+        if not models.Bill.objects.filter(pk=bill_id).exists():
+            print('Bill does not exist')
+            raise serializers.ValidationError('Bill does not exist')
         return models.BillItem.objects.create(bill_id=bill_id, **validated_data)
 
     class Meta:
         model = models.BillItem
-        fields = ['id', 'name', 'price', 'currency', 'paid_date', 'payer']
+        fields = ['id', 'name', 'price', 'currency', 'paid_date', 'creator']
+
+
+class UpdateBillItemSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.BillItem
+        fields = ['name', 'price', 'currency', 'paid_date']
 
 
 class BillSerializer(serializers.ModelSerializer):
